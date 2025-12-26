@@ -3,6 +3,21 @@ const PASS="super00100101";
 let db = JSON.parse(localStorage.getItem("SuperShareDB")) || {};
 let currentUser = localStorage.getItem("SuperShareSession");
 
+// ===== PEERJS REALTIME =====
+const peer = new Peer();
+const conns = [];
+
+peer.on('connection', conn => {
+  conns.push(conn);
+  conn.on('data', data => receiveData(data));
+});
+
+// Broadcast to all peers
+function broadcast(data){
+  conns.forEach(c=>c.send(data));
+}
+
+// ===== LOGIN =====
 function login(){
   if(password.value!==PASS || !username.value || !avatar.files[0]) return;
   const r=new FileReader();
@@ -24,6 +39,7 @@ function start(u){
   render();
 }
 
+// ===== LOGOUT =====
 function logout(){
   localStorage.removeItem("SuperShareSession");
   currentUser=null;
@@ -31,45 +47,46 @@ function logout(){
   loginCard.classList.remove("hidden");
 }
 
+// ===== SHARE =====
 function share(){
   const text=textShare.value.trim();
   const file=fileShare.files[0];
 
-  if(text){
-    db[currentUser].items.unshift({
-      id:crypto.randomUUID(),
-      owner:currentUser,
-      type:"text",
-      content:text
-    });
-  }
+  const post = {owner:currentUser, text:"", file:null};
 
+  if(text) post.text=text;
   if(file){
-    db[currentUser].items.unshift({
-      id:crypto.randomUUID(),
-      owner:currentUser,
-      type:file.type.startsWith("image")?"image":
-           file.type.startsWith("video")?"video":
-           file.type.startsWith("audio")?"audio":"file",
-      name:file.name,
-      size:file.size,
-      url:URL.createObjectURL(file)
-    });
+    const fReader = new FileReader();
+    fReader.onload = () => {
+      post.file={name:file.name, data:fReader.result};
+      db[currentUser].items.unshift(post);
+      localStorage.setItem("SuperShareDB",JSON.stringify(db));
+      broadcast(post);
+      render();
+    };
+    fReader.readAsDataURL(file);
+    textShare.value="";
+    fileShare.value="";
+    return;
   }
 
+  db[currentUser].items.unshift(post);
   localStorage.setItem("SuperShareDB",JSON.stringify(db));
+  broadcast(post);
+  render();
   textShare.value="";
   fileShare.value="";
-  render();
 }
 
-function deleteItem(owner,id){
-  if(owner!==currentUser) return;
-  db[owner].items=db[owner].items.filter(i=>i.id!==id);
+// ===== RECEIVE DATA =====
+function receiveData(data){
+  if(!db[data.owner]) db[data.owner]={avatar:"",items:[]};
+  db[data.owner].items.unshift(data);
   localStorage.setItem("SuperShareDB",JSON.stringify(db));
   render();
 }
 
+// ===== RENDER =====
 function render(){
   feed.innerHTML="";
   Object.entries(db).forEach(([user,data])=>{
@@ -78,25 +95,30 @@ function render(){
       d.className="item";
       d.innerHTML=`
         <div class="item-header">
-          <img src="${data.avatar}">
+          <img src="${data.avatar || pImg.src}">
           <b>${user}</b>
-          ${i.owner===currentUser?`<button class="delete-btn" onclick="deleteItem('${user}','${i.id}')">Delete</button>`:""}
+          ${i.owner===currentUser?`<button class="delete-btn" onclick="deleteItem('${user}','${i.id || ''}')">Delete</button>`:""}
         </div>
       `;
-      if(i.type==="text") d.innerHTML+=`<div>${i.content}</div>`;
-      if(i.type==="image") d.innerHTML+=`<img src="${i.url}">`;
-      if(i.type==="video") d.innerHTML+=`<video controls src="${i.url}"></video>`;
-      if(i.type==="audio") d.innerHTML+=`<audio controls src="${i.url}"></audio>`;
-      if(i.type==="file") d.innerHTML+=`
-        <div class="file-card">${i.name} — ${(i.size/1024/1024).toFixed(2)} MB</div>`;
+      if(i.text) d.innerHTML+=`<div>${i.text}</div>`;
+      if(i.file) d.innerHTML+=`<div class="file-card"><a href="${i.file.data}" download="${i.file.name}">${i.file.name}</a></div>`;
       feed.appendChild(d);
     });
   });
 }
 
-/* AUTO LOGIN ON LOAD */
+// ===== DELETE =====
+function deleteItem(owner,id){
+  if(owner!==currentUser) return;
+  db[owner].items=db[owner].items.filter(i=>i.id!==id);
+  localStorage.setItem("SuperShareDB",JSON.stringify(db));
+  render();
+}
+
+/* AUTO LOGIN */
 if(currentUser && db[currentUser]){
   start(currentUser);
+  peer.on('open', id => console.log("Your Peer ID:", id));
 }else{
   loginCard.classList.remove("hidden");
 }
