@@ -17,12 +17,12 @@ body{
 }
 
 .card{
-  width:900px;
-  min-height:600px;
+  width:1100px;
+  min-height:650px;
   background:linear-gradient(160deg,rgba(255,255,255,0.25),rgba(255,255,255,0.08));
   backdrop-filter:blur(24px);
   border-radius:30px;
-  padding:40px;
+  padding:46px;
   box-shadow:0 50px 140px rgba(0,0,0,0.5);
 }
 
@@ -113,6 +113,13 @@ body{
   display:flex;align-items:center;gap:16px;margin-bottom:14px;
 }
 .item-header img{width:50px;height:50px;border-radius:50%}
+.delete-btn{
+  margin-left:auto;background:none;border:none;
+  color:#ffb4b4;cursor:pointer;
+}
+.preview img,video,audio{
+  max-width:100%;border-radius:20px;margin-top:12px;
+}
 .file-card{
   margin-top:12px;padding:18px;
   border-radius:18px;background:rgba(0,0,0,0.35);
