@@ -3,19 +3,15 @@ const PASS="super00100101";
 let db = JSON.parse(localStorage.getItem("SuperShareDB")) || {};
 let currentUser = localStorage.getItem("SuperShareSession");
 
-// ===== PEERJS REALTIME =====
-const peer = new Peer();
-const conns = [];
-
-peer.on('connection', conn => {
-  conns.push(conn);
-  conn.on('data', data => receiveData(data));
-});
-
-// Broadcast to all peers
-function broadcast(data){
-  conns.forEach(c=>c.send(data));
-}
+// ===== WEBSOCKET =====
+const ws = new WebSocket("ws://localhost:3000"); // Change port if needed
+ws.onmessage = (msg)=>{
+  const data = JSON.parse(msg.data);
+  if(!db[data.owner]) db[data.owner]={avatar:"",items:[]};
+  db[data.owner].items.unshift(data);
+  localStorage.setItem("SuperShareDB",JSON.stringify(db));
+  render();
+};
 
 // ===== LOGIN =====
 function login(){
@@ -25,13 +21,13 @@ function login(){
     db[username.value]=db[username.value]||{avatar:r.result,items:[]};
     localStorage.setItem("SuperShareDB",JSON.stringify(db));
     localStorage.setItem("SuperShareSession",username.value);
+    currentUser=username.value;
     start(username.value);
   };
   r.readAsDataURL(avatar.files[0]);
 }
 
 function start(u){
-  currentUser=u;
   loginCard.classList.add("hidden");
   appCard.classList.remove("hidden");
   pImg.src=db[u].avatar;
@@ -52,7 +48,7 @@ function share(){
   const text=textShare.value.trim();
   const file=fileShare.files[0];
 
-  const post = {owner:currentUser, text:"", file:null};
+  const post = {owner:currentUser, text:"", file:null, id:crypto.randomUUID()};
 
   if(text) post.text=text;
   if(file){
@@ -61,7 +57,7 @@ function share(){
       post.file={name:file.name, data:fReader.result};
       db[currentUser].items.unshift(post);
       localStorage.setItem("SuperShareDB",JSON.stringify(db));
-      broadcast(post);
+      ws.send(JSON.stringify(post));
       render();
     };
     fReader.readAsDataURL(file);
@@ -72,18 +68,10 @@ function share(){
 
   db[currentUser].items.unshift(post);
   localStorage.setItem("SuperShareDB",JSON.stringify(db));
-  broadcast(post);
+  ws.send(JSON.stringify(post));
   render();
   textShare.value="";
   fileShare.value="";
-}
-
-// ===== RECEIVE DATA =====
-function receiveData(data){
-  if(!db[data.owner]) db[data.owner]={avatar:"",items:[]};
-  db[data.owner].items.unshift(data);
-  localStorage.setItem("SuperShareDB",JSON.stringify(db));
-  render();
 }
 
 // ===== RENDER =====
@@ -97,7 +85,7 @@ function render(){
         <div class="item-header">
           <img src="${data.avatar || pImg.src}">
           <b>${user}</b>
-          ${i.owner===currentUser?`<button class="delete-btn" onclick="deleteItem('${user}','${i.id || ''}')">Delete</button>`:""}
+          ${i.owner===currentUser?`<button class="delete-btn" onclick="deleteItem('${user}','${i.id}')">Delete</button>`:""}
         </div>
       `;
       if(i.text) d.innerHTML+=`<div>${i.text}</div>`;
@@ -118,7 +106,4 @@ function deleteItem(owner,id){
 /* AUTO LOGIN */
 if(currentUser && db[currentUser]){
   start(currentUser);
-  peer.on('open', id => console.log("Your Peer ID:", id));
-}else{
-  loginCard.classList.remove("hidden");
 }
