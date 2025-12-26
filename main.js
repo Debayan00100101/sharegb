@@ -1,99 +1,102 @@
-let currentUser = null;
-const peers = [];
-const connections = [];
-const peer = new Peer(); // free default PeerJS server
+const PASS="super00100101";
 
-// ===== LOGIN =====
+let db = JSON.parse(localStorage.getItem("SuperShareDB")) || {};
+let currentUser = localStorage.getItem("SuperShareSession");
+
 function login(){
-  const u = username.value.trim();
-  if(!u || !avatar.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    currentUser = u;
-    pImg.src = reader.result;
-    pName.textContent = u;
-    loginCard.classList.add("hidden");
-    appCard.classList.remove("hidden");
-    startPeer();
+  if(password.value!==PASS || !username.value || !avatar.files[0]) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    db[username.value]=db[username.value]||{avatar:r.result,items:[]};
+    localStorage.setItem("SuperShareDB",JSON.stringify(db));
+    localStorage.setItem("SuperShareSession",username.value);
+    start(username.value);
   };
-  reader.readAsDataURL(avatar.files[0]);
+  r.readAsDataURL(avatar.files[0]);
 }
 
-// ===== START PEER =====
-function startPeer(){
-  peer.on('open', id => console.log("Peer ID:", id));
-
-  // Listen for incoming connections
-  peer.on('connection', conn => {
-    conn.on('data', data => handleMessage(data));
-    connections.push(conn);
-  });
-
-  // Optional: auto connect to known peer IDs
-  // peers.forEach(p => connections.push(peer.connect(p)));
+function start(u){
+  currentUser=u;
+  loginCard.classList.add("hidden");
+  appCard.classList.remove("hidden");
+  pImg.src=db[u].avatar;
+  pName.textContent=u;
+  render();
 }
 
-// ===== SHARE =====
-function share(){
-  const text = textShare.value.trim();
-  const file = fileShare.files[0];
-  if(!text && !file) return;
-
-  if(file){
-    const reader = new FileReader();
-    reader.onload = () => {
-      broadcast({owner: currentUser, file:{name:file.name, data:reader.result}});
-      addFeed({owner:currentUser, file:{name:file.name}});
-    };
-    reader.readAsDataURL(file);
-  } else {
-    broadcast({owner: currentUser, text});
-    addFeed({owner: currentUser, text});
-  }
-
-  textShare.value = "";
-  fileShare.value = "";
-}
-
-// ===== BROADCAST =====
-function broadcast(data){
-  connections.forEach(c => c.send(data));
-}
-
-// ===== FEED =====
-function addFeed(item){
-  const d = document.createElement("div");
-  d.className = "item";
-  d.innerHTML = `
-    <div class="item-header">
-      <img src="${pImg.src}">
-      <b>${item.owner}</b>
-    </div>
-    ${item.text ? `<div>${item.text}</div>` : ""}
-    ${item.file ? `<div class="file-card"><a href="${item.file.data}" download="${item.file.name}">${item.file.name}</a></div>` : ""}
-  `;
-  feed.prepend(d);
-}
-
-// ===== HANDLE MESSAGE =====
-function handleMessage(data){
-  addFeed(data);
-}
-
-// ===== LOGOUT =====
 function logout(){
-  currentUser=null;
   localStorage.removeItem("SuperShareSession");
+  currentUser=null;
   appCard.classList.add("hidden");
   loginCard.classList.remove("hidden");
 }
 
-// ===== AUTO LOGIN =====
-const sessionUser = localStorage.getItem("SuperShareSession");
-if(sessionUser){
-  currentUser = sessionUser;
-  loginCard.classList.add("hidden");
-  appCard.classList.remove("hidden");
-  pName.textContent = currentUser;
-  startPeer();
+function share(){
+  const text=textShare.value.trim();
+  const file=fileShare.files[0];
+
+  if(text){
+    db[currentUser].items.unshift({
+      id:crypto.randomUUID(),
+      owner:currentUser,
+      type:"text",
+      content:text
+    });
+  }
+
+  if(file){
+    db[currentUser].items.unshift({
+      id:crypto.randomUUID(),
+      owner:currentUser,
+      type:file.type.startsWith("image")?"image":
+           file.type.startsWith("video")?"video":
+           file.type.startsWith("audio")?"audio":"file",
+      name:file.name,
+      size:file.size,
+      url:URL.createObjectURL(file)
+    });
+  }
+
+  localStorage.setItem("SuperShareDB",JSON.stringify(db));
+  textShare.value="";
+  fileShare.value="";
+  render();
+}
+
+function deleteItem(owner,id){
+  if(owner!==currentUser) return;
+  db[owner].items=db[owner].items.filter(i=>i.id!==id);
+  localStorage.setItem("SuperShareDB",JSON.stringify(db));
+  render();
+}
+
+function render(){
+  feed.innerHTML="";
+  Object.entries(db).forEach(([user,data])=>{
+    data.items.forEach(i=>{
+      const d=document.createElement("div");
+      d.className="item";
+      d.innerHTML=`
+        <div class="item-header">
+          <img src="${data.avatar}">
+          <b>${user}</b>
+          ${i.owner===currentUser?`<button class="delete-btn" onclick="deleteItem('${user}','${i.id}')">Delete</button>`:""}
+        </div>
+      `;
+      if(i.type==="text") d.innerHTML+=`<div>${i.content}</div>`;
+      if(i.type==="image") d.innerHTML+=`<img src="${i.url}">`;
+      if(i.type==="video") d.innerHTML+=`<video controls src="${i.url}"></video>`;
+      if(i.type==="audio") d.innerHTML+=`<audio controls src="${i.url}"></audio>`;
+      if(i.type==="file") d.innerHTML+=`
+        <div class="file-card">${i.name} — ${(i.size/1024/1024).toFixed(2)} MB</div>`;
+      feed.appendChild(d);
+    });
+  });
+}
+
+/* AUTO LOGIN ON LOAD */
+if(currentUser && db[currentUser]){
+  start(currentUser);
+}else{
+  loginCard.classList.remove("hidden");
 }
