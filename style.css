@@ -1,0 +1,28 @@
+:root{
+  --glass: rgba(255,255,255,0.18);
+  --border: rgba(255,255,255,0.3);
+  --btn: linear-gradient(135deg,#a855f7,#7c3aed);
+}
+body{
+  margin:0;
+  min-height:100vh;
+  background:linear-gradient(135deg,#2b1055,#4b1b7a,#7a2cff);
+  display:flex;justify-content:center;align-items:center;
+  font-family:system-ui;color:white;
+}
+.card{
+  width:900px;
+  background:linear-gradient(160deg,rgba(255,255,255,0.25),rgba(255,255,255,0.08));
+  backdrop-filter:blur(24px);
+  border-radius:30px;
+  padding:30px;
+}
+.hidden{display:none}
+.login-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;}
+.login-form input, .login-form button{
+  width:100%;padding:14px;margin-top:12px;border-radius:14px;border:none;
+}
+button{background:var(--btn);color:white;font-weight:700;cursor:pointer;}
+textarea{width:70%;min-height:80px;border-radius:16px;border:none;padding:14px;background:rgba(0,0,0,0.35);color:white;}
+.feed{max-height:400px;overflow-y:auto;margin-top:20px;}
+.item{background:var(--glass);padding:16px;border-radius:16px;margin-bottom:16px;}

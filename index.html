@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SuperShare • Debayan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div class="card" id="loginCard">
+  <div class="login-grid">
+    <div>
+      <div class="logo">
+        <div class="logo-mark"></div>
+        <div class="logo-text">SuperShare</div>
+      </div>
+      Share files up to <b>1TB</b>.
+    </div>
+    <div class="login-form">
+      <input id="username" placeholder="Enter username">
+      <input type="file" id="avatar">
+      <button onclick="login()">Enter</button>
+    </div>
+  </div>
+</div>
+
+<div class="card hidden" id="appCard">
+  <div class="header">
+    <img id="pImg">
+    <div class="name" id="pName"></div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="share-center">
+    <textarea id="textShare" placeholder="Write something to share…"></textarea>
+    <div class="share-actions">
+      <label class="file-btn">Add File
+        <input type="file" id="fileShare">
+      </label>
+      <button onclick="share()">Share</button>
+    </div>
+  </div>
+
+  <div class="feed" id="feed"></div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
