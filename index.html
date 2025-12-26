@@ -5,12 +5,11 @@
 <title>SuperShare • Debayan</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
-<script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div class="card" id="loginCard">
+<div class="card hidden" id="loginCard">
   <div class="login-grid">
     <div>
       <div class="logo">
@@ -21,6 +20,7 @@
     </div>
     <div class="login-form">
       <input id="username" placeholder="Enter username">
+      <input type="password" id="password" placeholder="Enter password">
       <input type="file" id="avatar">
       <button onclick="login()">Enter</button>
     </div>
