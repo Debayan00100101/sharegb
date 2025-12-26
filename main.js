@@ -1,8 +1,7 @@
 let currentUser = null;
-const peers = {};
+const peers = [];
 const connections = [];
-
-const peer = new Peer(); // uses default free PeerJS server
+const peer = new Peer(); // free default PeerJS server
 
 // ===== LOGIN =====
 function login(){
@@ -11,7 +10,6 @@ function login(){
   const reader = new FileReader();
   reader.onload = () => {
     currentUser = u;
-    localStorage.setItem("SuperShareSession", u);
     pImg.src = reader.result;
     pName.textContent = u;
     loginCard.classList.add("hidden");
@@ -23,29 +21,29 @@ function login(){
 
 // ===== START PEER =====
 function startPeer(){
-  peer.on('open', id => {
-    console.log("My peer ID: ", id);
-  });
+  peer.on('open', id => console.log("Peer ID:", id));
 
-  // Handle incoming connections
+  // Listen for incoming connections
   peer.on('connection', conn => {
     conn.on('data', data => handleMessage(data));
     connections.push(conn);
   });
+
+  // Optional: auto connect to known peer IDs
+  // peers.forEach(p => connections.push(peer.connect(p)));
 }
 
 // ===== SHARE =====
 function share(){
   const text = textShare.value.trim();
   const file = fileShare.files[0];
-
   if(!text && !file) return;
 
   if(file){
     const reader = new FileReader();
     reader.onload = () => {
-      broadcast({owner: currentUser, file: {name:file.name, data: reader.result}});
-      addFeed({owner: currentUser, file:{name:file.name}});
+      broadcast({owner: currentUser, file:{name:file.name, data:reader.result}});
+      addFeed({owner:currentUser, file:{name:file.name}});
     };
     reader.readAsDataURL(file);
   } else {
@@ -53,8 +51,8 @@ function share(){
     addFeed({owner: currentUser, text});
   }
 
-  textShare.value="";
-  fileShare.value="";
+  textShare.value = "";
+  fileShare.value = "";
 }
 
 // ===== BROADCAST =====
@@ -67,7 +65,10 @@ function addFeed(item){
   const d = document.createElement("div");
   d.className = "item";
   d.innerHTML = `
-    <div class="item-header"><b>${item.owner}</b></div>
+    <div class="item-header">
+      <img src="${pImg.src}">
+      <b>${item.owner}</b>
+    </div>
     ${item.text ? `<div>${item.text}</div>` : ""}
     ${item.file ? `<div class="file-card"><a href="${item.file.data}" download="${item.file.name}">${item.file.name}</a></div>` : ""}
   `;
@@ -81,7 +82,7 @@ function handleMessage(data){
 
 // ===== LOGOUT =====
 function logout(){
-  currentUser = null;
+  currentUser=null;
   localStorage.removeItem("SuperShareSession");
   appCard.classList.add("hidden");
   loginCard.classList.remove("hidden");
